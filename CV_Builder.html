@@ -671,7 +671,7 @@ function renderData() {
        '</div>';
   h += '<p class="hint">Refreshing re-reads every sheet and keeps your section choices, ordering and edits wherever the records still exist.' + (d ? ' \u201cDownload my data as Excel\u201d hands the loaded content back as a workbook \u2014 build it up offline, then Refresh to bring it in.' : '') + '</p></div>';
 
-  h += '<div class="card"><div class="cardtitle">Starter workbook</div><p class="hint" style="margin-top:0">Need a fresh file in the right shape? This generates a blank workbook with every sheet, header and an example row per section \u2014 complete it offline in Excel, then load it back here and the app populates from it.</p><div class="btnrow"><button class="btn btn-ghost" id="dlStarterBtn">Download starter workbook</button></div></div>';
+  h += '<div class="card"><div class="cardtitle">Starter workbook</div><p class="hint" style="margin-top:0">Need a fresh file in the right shape? This generates a blank workbook with every sheet, header and an example row per section \u2014 complete it offline in Excel, then load it back here and the app populates from it.</p><div class="btnrow"><button class="btn btn-ghost" id="dlStarterBtn" data-starter>Download starter workbook</button></div></div>';
 
   if (d) {
     h += '<div class="card"><div class="cardtitle">Sheets found</div><div class="sheetgrid">';
@@ -695,7 +695,7 @@ function renderData() {
     if (warnings.length) h += '<div class="card card-warn"><div class="cardtitle">Warnings</div>' + warnings.map(function (w) { return '<div class="warnrow">' + w + '</div>'; }).join('') + '</div>';
   }
   el.innerHTML = h;
-  document.getElementById('dlStarterBtn').addEventListener('click', downloadStarterWorkbook);
+  wireStarter(el);
   var dlD = document.getElementById('dlDataBtn');
   if (dlD) dlD.addEventListener('click', downloadCurrentData);
   var inp = document.getElementById('xlsxInput');
@@ -718,7 +718,10 @@ function renderData() {
 ================================================================ */
 function renderSections() {
   var el = document.getElementById('page-sections');
-  if (!state.data) { el.innerHTML = '<div class="pagehead"><h1>Sections</h1></div><div class="card"><div class="empty">Load your Excel workbook on the <a href="#" data-go="data">Data</a> page first.</div></div>'; wireGo(el); return; }
+  if (!state.data) {
+    el.innerHTML = '<div class="pagehead"><h1>Sections</h1></div><div class="card"><div class="empty">Load your Excel workbook on the <a href="#" data-go="data">Data</a> page first \u2014 or start from a fresh template:</div><div class="btnrow"><button class="btn btn-ghost" data-starter>Download starter workbook</button></div></div>';
+    wireGo(el); wireStarter(el); return;
+  }
 
   var sidebarTpl = state.template === 'sidebar';
   var h = '<div class="pagehead"><h1>Sections</h1><p class="sub">Choose what appears on the CV, pick records where a sheet has several, and set the order. The identity block is always first.</p></div>';
@@ -912,7 +915,10 @@ function ovSpan(txt, path, block) {
 function renderPreview() {
   var el = document.getElementById('page-preview');
   var pal = PALETTES[state.palette] || PALETTES['navy-teal'];
-  if (!state.data) { el.innerHTML = '<div class="pagehead"><h1>Preview</h1></div><div class="card"><div class="empty">Nothing to show yet \u2014 load your workbook on the <a href="#" data-go="data">Data</a> page.</div></div>'; wireGo(el); return; }
+  if (!state.data) {
+    el.innerHTML = '<div class="pagehead"><h1>Preview</h1></div><div class="card"><div class="empty">Nothing to show yet \u2014 load your workbook on the <a href="#" data-go="data">Data</a> page, or start from a fresh template:</div><div class="btnrow"><button class="btn btn-ghost" data-starter>Download starter workbook</button></div></div>';
+    wireGo(el); wireStarter(el); return;
+  }
 
   var css = '--cvh:#' + pal.heading + ';--cva:#' + pal.accent + ';--cvb:#' + pal.accent2 + ';--cvr:#' + pal.rule + ';';
   var tpl = state.template || 'classic';
@@ -1171,11 +1177,13 @@ function renderExport() {
   h += '<div class="card"><div class="cardtitle">Word document</div><p class="hint">Builds a real .docx (not converted HTML) in the selected template and palette \u2014 headings, tab-stop dates, real bullets, value-tile table and photo included \u2014 so it opens in Word formatted correctly.</p><div class="btnrow"><button class="btn btn-primary" id="wordBtn">Create Word document</button></div></div>';
   h += '<div class="card"><div class="cardtitle">PDF</div><p class="hint">Uses the browser\u2019s print dialog \u2014 choose \u201cSave as PDF\u201d. The preview page is what prints, always on white, without the app around it.</p><div class="btnrow"><button class="btn btn-ghost" id="pdfBtn">Print / save as PDF</button></div></div>';
   h += '<div class="card"><div class="cardtitle">Save app</div><p class="hint">Downloads a fresh copy of CV_Builder.html with everything embedded. Keep the newest copy \u2014 it replaces the old one, exactly like the tracker.</p><div class="btnrow"><button class="btn btn-primary" id="saveBtn2">Save app</button></div></div>';
+  h += '<div class="card"><div class="cardtitle">Starter workbook</div><p class="hint">A blank data workbook in the exact shape the app reads \u2014 every sheet, header and an example row. Hand it to anyone so they can build their experience bank offline and load it in.</p><div class="btnrow"><button class="btn btn-ghost" data-starter>Download starter workbook</button></div></div>';
   h += '<div class="card"><div class="cardtitle">Backup</div><p class="hint">Move your setup between app versions: export the settings + data snapshot as JSON, import it into a newer copy of the app.</p><div class="btnrow"><button class="btn btn-ghost" id="bakBtn">Export backup (JSON)</button><label class="btn btn-ghost">Import backup<input type="file" id="bakInput" accept=".json" hidden></label></div></div>';
   el.innerHTML = h;
   document.getElementById('wordBtn').addEventListener('click', exportWord);
   document.getElementById('pdfBtn').addEventListener('click', function () { go('preview'); setTimeout(function () { window.print(); }, 150); });
   document.getElementById('saveBtn2').addEventListener('click', saveApp);
+  wireStarter(el);
   document.getElementById('bakBtn').addEventListener('click', function () {
     download(new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' }), 'CV_Builder_Backup.json');
   });
@@ -1390,6 +1398,11 @@ function go(page) {
   document.querySelectorAll('.navitem').forEach(function (n) { n.classList.toggle('on', n.getAttribute('data-page') === page); });
   document.querySelectorAll('.page').forEach(function (p) { p.classList.toggle('on', p.id === 'page-' + page); });
   window.scrollTo(0, 0);
+}
+function wireStarter(root) {
+  root.querySelectorAll('[data-starter]').forEach(function (b) {
+    b.addEventListener('click', downloadStarterWorkbook);
+  });
 }
 function wireGo(root) {
   root.querySelectorAll('[data-go]').forEach(function (a) {
